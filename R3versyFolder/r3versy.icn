@@ -1,0 +1,39 @@
+                                                          
+link strings
+link ximage
+import lang
+global UserList
+global sock_list, config
+
+
+
+
+
+#tcpclient
+class TCPClient(Address)
+	method connect()
+		write("Connecting to: ", Address)
+		sock := tcp_socket(Address)
+	end
+	method tcp_socket(Addr)
+
+		s := open(Address, "n") | 
+		     stop("Connecting to: ", Address, "ERROR: ", &errortext)
+		return s
+	end
+	initially(p)
+	   write("TCPClient")
+	   Address := p
+
+end
+
+procedure main()
+     local msg := ""
+     local addr := "127.0.0.1"
+     local port := "9090"
+     tcp_client := TCPCLient(addr || ":" || port)
+     tcp_client.connect()
+	#stop("open(",server,") ERROR: ", &errortext)
+end
+
+

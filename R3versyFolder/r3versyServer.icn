@@ -1,0 +1,117 @@
+link strings
+link basename
+link xoptions
+global UserList
+global sock_list
+class TCPSession(sock)
+#<p>
+#       The method <tt>tcp_session</tt> makes different threads in one session
+#</p>
+   method tcp_session()
+      write("new thread, id: " || serial() || "  socket:", image(sock))
+      repeat {
+         if *select(sock) > 0 then {
+            if msg := ready(sock) then {      # read whatever available on the socket
+                         if msg == "" then next
+                         if /msg then next
+                         req:=Request(msg)
+			 res := read()
+                         writes(sock,res)                     # send back to the client
+
+
+               }
+            else {  # We see activity on the socket but nothing to read, assume client has closed the socket
+               write("closing socket: " || image(sock))
+               delete(sock_list, sock)
+               close(sock)
+               break # done, break out of the loop
+            }
+         }
+      }
+   end
+   initially(s)
+      sock := s
+      thread tcp_session()
+end
+
+
+class TCPServer(addrport)
+#<p>
+#       The method <tt>run</tt> waits for a new client to connect
+#</p>
+   method run()
+      write("Server running at ", addrport, "  Press CTRL+C to stop...")
+      # The main thread is just a thread orchestrator
+      # every time a client connects, a new thread is created to handle it
+      repeat {
+         sock := tcp_socket(addrport) # block and wait to accept a new connection
+         write("launching a new thread...")
+         TCPSession(sock)
+       }
+   end
+   method tcp_socket()
+      write("Open tcp socket at ", addrport)
+      s := open(addrport, "na") |
+           stop("open(",s,") ERROR: ", &errortext)
+      insert(sock_list, s)
+      return s
+   end
+   initially(p)
+      addrport := p
+end
+
+
+procedure usage()
+   write("------------")
+   write("*  R3versy *")
+   write("------------")
+   prog := basename(&progname)
+   write("Usage: ", prog, " [options]\n")
+   write(prog, " is a resvershell C2 server")
+   write("Options:")
+   write("\t -a : address to bind to, default to any addr")
+   write("\t -p : port to use, default to 8080")
+   write("\t -h : show this help\n")
+   exit(-1)
+end
+procedure main(args)
+   local opts, port, addr
+ 
+   opts := xoptions(args, "ha:p+")
+   /opts["h"] | usage()
+   addr := \opts["a"] | ""
+   port := \opts["p"] | "8080"
+   0 < port < 65536 | stop("invalid port: ", port)
+   sock_list := mutex(set())
+   trap("SIGINT", sig)
+   tcp_server := TCPServer(addr || ":" || port)
+   tcp_server.run()
+end
+
+procedure sig(siganl)
+   write("\nshutdown signal received! Server Shutting down...")
+   every close(!sock_list)
+   exit(0)
+end
+
+class Request(
+    request_line,
+    header_fields,
+    body,
+    form,
+    request_target,
+    http_version,
+    status,
+	response
+    )
+#<p>
+#	The method <tt>parse_request</tt> separates out the request line and the header fields, returns String response
+#		<[param msg String client sent]>
+#</p>	
+    method parse_request(msg)
+       write(msg) 
+    end
+    initially(message)
+        msg:=message
+		parse_request(msg)
+end
